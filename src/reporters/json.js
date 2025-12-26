@@ -75,3 +75,58 @@ export function outputJsonReport(report, stats, projectStats) {
   console.log(JSON.stringify(jsonData, null, 2))
 }
 
+export function outputMultiProjectJsonReport(
+  aggregatedReport,
+  projectResults,
+  aggregatedStats,
+  aggregatedProjectStats
+) {
+  const jsonData = {
+    mode: 'multi-project',
+    projectCount: projectResults.length,
+    projects: projectResults.map((r) => ({
+      name: r.projectName,
+      path: r.repoPath,
+      commits: r.stats.summary.totalCommits,
+      linesAdded: r.stats.summary.totalAdditions,
+      linesRemoved: r.stats.summary.totalDeletions,
+    })),
+    aggregated: {
+      projectName: aggregatedReport.projectName,
+      user: aggregatedReport.user,
+      year: aggregatedReport.year,
+      overview: {
+        commits: aggregatedReport.overview.commits,
+        daysWorked: aggregatedReport.overview.daysWorked,
+        maxStreak: aggregatedReport.overview.maxStreak,
+        linesAdded: aggregatedReport.overview.linesAdded,
+        linesRemoved: aggregatedReport.overview.linesRemoved,
+        health: parseFloat(aggregatedReport.overview.health),
+      },
+      contrast: {
+        projectTotalCommits: aggregatedProjectStats.totalCommits,
+        projectAuthors: aggregatedProjectStats.totalAuthors,
+        contributionRatio: parseFloat(aggregatedReport.contrast.contributionRatio),
+        beatPercent: aggregatedReport.contrast.beatPercent,
+      },
+      sentimentProfile: aggregatedReport.sentimentProfile,
+      advancedMetrics: {
+        soleMaintenanceIndex: parseFloat(
+          aggregatedReport.advancedMetrics.soleMaintenanceIndex
+        ),
+        innovationRatio: parseFloat(aggregatedReport.advancedMetrics.innovationRatio),
+        refinementImpact: parseFloat(aggregatedReport.advancedMetrics.refinementImpact),
+        techBreadth: parseFloat(aggregatedReport.advancedMetrics.techBreadth),
+      },
+      radar: Object.fromEntries(
+        Object.entries(aggregatedReport.radar).map(([key, value]) => [
+          key,
+          parseInt(value),
+        ])
+      ),
+    },
+  }
+
+  console.log(JSON.stringify(jsonData, null, 2))
+}
+
