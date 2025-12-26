@@ -2,11 +2,14 @@ import { colorize, colors } from '../utils/colors.js';
 import { renderVisualReport } from './visual.js';
 
 function formatNumber(num) {
-  if (num >= 1000000) {
-    return (num / 1000000).toFixed(1) + 'M';
+  const absNum = Math.abs(num);
+  if (absNum >= 1000000) {
+    const sign = num < 0 ? '-' : '';
+    return sign + (absNum / 1000000).toFixed(1) + 'M';
   }
-  if (num >= 1000) {
-    return (num / 1000).toFixed(1) + 'K';
+  if (absNum >= 1000) {
+    const sign = num < 0 ? '-' : '';
+    return sign + (absNum / 1000).toFixed(1) + 'K';
   }
   return num.toString();
 }
@@ -14,8 +17,15 @@ function formatNumber(num) {
 function createProgressBar(percentage, barLength = 20) {
   const filled = Math.floor((percentage / 100) * barLength);
   const empty = barLength - filled;
+  // 根据占比值选择颜色：高占比(>=50%)绿色，中等(>=20%)黄色，低占比(<20%)蓝色
+  const barColor =
+    percentage >= 50
+      ? colors.green
+      : percentage >= 20
+      ? colors.yellow
+      : colors.blue;
   const bar =
-    colorize('█'.repeat(filled), colors.green) +
+    colorize('█'.repeat(filled), barColor) +
     colorize('░'.repeat(empty), colors.gray);
   return `${bar} ${percentage.toFixed(1)}%`;
 }
@@ -32,6 +42,10 @@ function renderTable(rows, columns) {
     const maxContentWidth = Math.max(
       ...rows.map((row) => {
         const content = row[col.key] || '';
+        // 处理带颜色的对象
+        if (typeof content === 'object' && content.text) {
+          return stripAnsiCodes(content.text).length;
+        }
         // 对于包含 ANSI 颜色代码的内容，需要去除颜色代码计算实际宽度
         if (typeof content === 'string') {
           return stripAnsiCodes(content).length;
@@ -71,11 +85,22 @@ function renderTable(rows, columns) {
       columns
         .map((col, i) => {
           let content = row[col.key] || '';
-          if (typeof content !== 'string') {
+          let useCustomColor = false;
+          let customColor = null;
+
+          // 处理带颜色的对象
+          if (typeof content === 'object' && content.text && content.color) {
+            customColor = content.color;
+            content = content.text;
+            useCustomColor = true;
+          } else if (typeof content !== 'string') {
             content = content.toString();
           }
+
           const formatted = content.padEnd(colWidths[i]);
-          const colored = col.color
+          const colored = useCustomColor
+            ? colorize(formatted, customColor)
+            : col.color
             ? colorize(formatted, col.color)
             : formatted;
           return ` ${colored} `;
@@ -94,7 +119,8 @@ function renderTable(rows, columns) {
 export function renderMultiProjectVisualReport(
   aggregatedReport,
   projectResults,
-  aggregatedStats
+  aggregatedStats,
+  unifiedEvaluation
 ) {
   // 先显示聚合报告
   renderVisualReport(aggregatedReport, aggregatedStats);
@@ -106,14 +132,13 @@ export function renderMultiProjectVisualReport(
 
   const totalCommits = aggregatedStats.summary.totalCommits;
   const sortedProjects = projectResults
-    .map((r) => ({
-      name: r.projectName,
-      commits: r.stats.summary.totalCommits,
-      additions: r.stats.summary.totalAdditions,
-      deletions: r.stats.summary.totalDeletions,
-      netLines: r.stats.summary.totalAdditions - r.stats.summary.totalDeletions,
-      ratio: (r.stats.summary.totalCommits / totalCommits) * 100,
-    }))
+    .map((r) => {
+      return {
+        name: r.projectName,
+        commits: r.stats.summary.totalCommits,
+        ratio: (r.stats.summary.totalCommits / totalCommits) * 100,
+      };
+    })
     .sort((a, b) => b.commits - a.commits);
 
   // 准备表格数据
@@ -121,7 +146,6 @@ export function renderMultiProjectVisualReport(
     return {
       rank: `#${index + 1}`,
       name: project.name,
-      commits: formatNumber(project.commits),
       ratio: createProgressBar(project.ratio, 15),
       ratioValue: project.ratio, // 用于排序和计算宽度
     };
@@ -142,12 +166,6 @@ export function renderMultiProjectVisualReport(
       color: colors.cyan,
     },
     {
-      key: 'commits',
-      header: '提交数',
-      minWidth: 8,
-      color: colors.green,
-    },
-    {
       key: 'ratio',
       header: '贡献占比',
       minWidth: 25,
@@ -157,13 +175,18 @@ export function renderMultiProjectVisualReport(
 
   renderTable(tableRows, tableColumns);
 
-  // 生成评价
-  const evaluation = generateEvaluation(
-    aggregatedReport,
-    aggregatedStats,
-    projectResults
-  );
-  renderEvaluation(evaluation);
+  // 使用统一评价（如果提供了）
+  if (unifiedEvaluation) {
+    renderEvaluation(unifiedEvaluation);
+  } else {
+    // 向后兼容：如果没有提供统一评价，使用原有逻辑
+    const evaluation = generateEvaluation(
+      aggregatedReport,
+      aggregatedStats,
+      projectResults
+    );
+    renderEvaluation(evaluation);
+  }
 }
 
 // 根据数据分析生成开发者角色评价
@@ -366,53 +389,4 @@ export function renderEvaluation(evaluation) {
       colors.white
     )}`
   );
-  console.log('');
-
-  // 详细数据
-  if (evaluation.details.length > 0) {
-    console.log(`  ${colorize('亮点', colors.green, colors.bright)}:`);
-    evaluation.details.forEach((detail) => {
-      console.log(`    • ${colorize(detail, colors.gray)}`);
-    });
-    console.log('');
-  }
-
-  // 数据摘要
-  console.log(`  ${colorize('数据摘要', colors.blue, colors.bright)}:`);
-  console.log(
-    `    ${colorize('总提交数', colors.gray)}: ${colorize(
-      evaluation.stats.totalCommits.toString(),
-      colors.green
-    )}`
-  );
-  if (evaluation.stats.totalProjects > 1) {
-    console.log(
-      `    ${colorize('参与项目', colors.gray)}: ${colorize(
-        evaluation.stats.totalProjects.toString(),
-        colors.cyan
-      )} 个`
-    );
-  }
-  console.log(
-    `    ${colorize('贡献占比', colors.gray)}: ${colorize(
-      `${evaluation.stats.contributionRatio.toFixed(1)}%`,
-      colors.yellow
-    )}`
-  );
-  if (evaluation.stats.soleMaintenanceIndex > 0) {
-    console.log(
-      `    ${colorize('独自维护', colors.gray)}: ${colorize(
-        `${evaluation.stats.soleMaintenanceIndex.toFixed(1)}%`,
-        colors.magenta
-      )}`
-    );
-  }
-  if (evaluation.stats.innovationRatio > 0) {
-    console.log(
-      `    ${colorize('创新产出', colors.gray)}: ${colorize(
-        `${evaluation.stats.innovationRatio.toFixed(1)}%`,
-        colors.green
-      )}`
-    );
-  }
 }

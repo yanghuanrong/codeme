@@ -23,6 +23,7 @@ import {
 } from './reporters/json.js';
 import { renderVisualReport } from './reporters/visual.js';
 import { renderMultiProjectVisualReport } from './reporters/multiProject.js';
+import { generateUnifiedEvaluation } from './analyzers/evaluation.js';
 import { ProgressBar, showProgress, logStep } from './utils/progress.js';
 import { createError, handleError } from './utils/errors.js';
 
@@ -185,7 +186,19 @@ export async function generateReport(config) {
   if (!jsonMode) {
     logStep(6, 6, '生成报告...');
   }
-  const report = buildReport(
+
+  // 先收集完整数据
+  const singleProjectResult = {
+    projectName,
+    stats,
+    projectStats,
+    metrics,
+    collaboration,
+    repoPath: validatedRepoPath,
+  };
+
+  // 先生成基础报告（不包含统一评价）
+  const baseReport = buildReport(
     author,
     year,
     projectName,
@@ -197,25 +210,43 @@ export async function generateReport(config) {
     topKeywords
   );
 
+  // 将 report 添加到 singleProjectResult 中
+  singleProjectResult.report = baseReport;
+
+  // 基于完整数据（包含 report）生成统一评价
+  const unifiedEvaluation = generateUnifiedEvaluation(
+    stats,
+    metrics,
+    collaboration,
+    [singleProjectResult],
+    projectStats
+  );
+
+  // 使用统一评价重新生成报告（包含统一评价的标签）
+  const report = buildReport(
+    author,
+    year,
+    projectName,
+    stats,
+    projectStats,
+    metrics,
+    collaboration,
+    logs,
+    topKeywords,
+    unifiedEvaluation
+  );
+
+  // 更新 singleProjectResult 中的 report
+  singleProjectResult.report = report;
+
   if (jsonMode) {
     outputJsonReport(report, stats, projectStats);
   } else {
     renderVisualReport(report, stats);
 
-    // 生成并显示开发者画像评价
-    const { generateEvaluation, renderEvaluation } = await import(
-      './reporters/multiProject.js'
-    );
-    const singleProjectResult = {
-      projectName,
-      stats,
-      projectStats,
-      metrics,
-      collaboration,
-      report,
-    };
-    const evaluation = generateEvaluation(report, stats, [singleProjectResult]);
-    renderEvaluation(evaluation);
+    // 显示统一评价
+    const { renderEvaluation } = await import('./reporters/multiProject.js');
+    renderEvaluation(unifiedEvaluation);
   }
 }
 
@@ -264,19 +295,8 @@ async function generateSingleProjectData(config) {
   const metrics = calculateMetrics(stats, projectStats.avgCommitsPerPerson);
   const projectName = getProjectName(validatedRepoPath);
 
-  const report = buildReport(
-    author,
-    year,
-    projectName,
-    stats,
-    projectStats,
-    metrics,
-    collaboration,
-    logs,
-    topKeywords
-  );
-
-  return {
+  // 先收集完整数据（不生成报告，因为需要统一评价）
+  const projectData = {
     author,
     projectName,
     repoPath: validatedRepoPath,
@@ -284,10 +304,11 @@ async function generateSingleProjectData(config) {
     projectStats,
     metrics,
     collaboration,
-    report,
     logs,
     topKeywords,
   };
+
+  return projectData;
 }
 
 // 聚合多个项目的统计数据
@@ -499,6 +520,37 @@ export async function generateMultiProjectReport(config) {
     aggregatedProjectStats.avgCommitsPerPerson
   );
 
+  // 为每个项目生成 report（用于统一评价分析）
+  const projectResultsWithReports = projectResults.map((r) => {
+    const projectLogs = r.logs || [];
+    const projectTopKeywords = r.topKeywords || [];
+    const projectReport = buildReport(
+      r.author || author,
+      year,
+      r.projectName,
+      r.stats,
+      r.projectStats,
+      r.metrics,
+      r.collaboration,
+      projectLogs,
+      projectTopKeywords
+    );
+    return {
+      ...r,
+      report: projectReport,
+    };
+  });
+
+  // 基于聚合数据生成统一评价
+  const unifiedEvaluation = generateUnifiedEvaluation(
+    aggregated,
+    metrics,
+    collaboration,
+    projectResultsWithReports,
+    aggregatedProjectStats
+  );
+
+  // 使用统一评价生成聚合报告
   const aggregatedReport = buildReport(
     author,
     year,
@@ -512,7 +564,8 @@ export async function generateMultiProjectReport(config) {
       date: new Date(),
       msg,
     })),
-    topKeywords
+    topKeywords,
+    unifiedEvaluation
   );
 
   if (jsonMode) {
@@ -525,8 +578,9 @@ export async function generateMultiProjectReport(config) {
   } else {
     renderMultiProjectVisualReport(
       aggregatedReport,
-      projectResults,
-      aggregated
+      projectResultsWithReports,
+      aggregated,
+      unifiedEvaluation
     );
   }
 }

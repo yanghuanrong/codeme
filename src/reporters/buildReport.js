@@ -1,6 +1,6 @@
-import { formatDateTime } from '../utils/colors.js'
-import { calculateStreak } from '../analyzers/stats.js'
-import { generateLabels, calculateRadar } from '../analyzers/metrics.js'
+import { formatDateTime } from '../utils/colors.js';
+import { calculateStreak } from '../analyzers/stats.js';
+import { generateLabels, calculateRadar } from '../analyzers/metrics.js';
 
 export const buildReport = (
   author,
@@ -11,9 +11,10 @@ export const buildReport = (
   metrics,
   collaboration,
   logs,
-  topKeywords
+  topKeywords,
+  unifiedEvaluation = null
 ) => {
-  const { interweavingScore, soleMaintenanceIndex } = collaboration
+  const { interweavingScore, soleMaintenanceIndex } = collaboration;
   const {
     innovationRatio,
     refinementImpact,
@@ -21,11 +22,12 @@ export const buildReport = (
     techBreadth,
     beatPercent,
     stabilityScore,
-  } = metrics
+  } = metrics;
 
-  const maxStreak = calculateStreak(stats.time.dates)
-  const labels = generateLabels(stats, metrics, collaboration)
-  const radar = calculateRadar(stats, metrics, collaboration)
+  const maxStreak = calculateStreak(stats.time.dates);
+  // 如果提供了统一评价，使用统一评价的标签，否则使用原有逻辑（向后兼容）
+  const labels = unifiedEvaluation?.labels || generateLabels(stats, metrics, collaboration);
+  const radar = calculateRadar(stats, metrics, collaboration);
 
   return {
     user: author,
@@ -116,5 +118,6 @@ export const buildReport = (
         stats.summary.totalCommits * 0.3,
     },
     labels,
-  }
-}
+    unifiedEvaluation: unifiedEvaluation || null,
+  };
+};
