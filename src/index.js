@@ -212,6 +212,7 @@ export async function generateReport(config) {
       projectStats,
       metrics,
       collaboration,
+      report,
     };
     const evaluation = generateEvaluation(report, stats, [singleProjectResult]);
     renderEvaluation(evaluation);

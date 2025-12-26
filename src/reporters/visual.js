@@ -55,6 +55,25 @@ export function renderVisualReport(report, stats) {
       colors.green
     )}`
   );
+  // 清理和过滤扩展名：去除异常字符、过滤非扩展名项、去重
+  const cleanedExtensions = [
+    ...new Set(
+      Object.keys(stats.fileExtensions)
+        .map((ext) => ext.replace(/[^a-zA-Z0-9]/g, '')) // 移除非字母数字字符
+        .filter((ext) => ext && ext.length <= 10) // 过滤空值和过长的项
+        .filter(
+          (ext) =>
+            ![
+              'env',
+              'development',
+              'production',
+              'lock',
+              'map',
+              'gitignore',
+            ].includes(ext.toLowerCase())
+        ) // 过滤明显不是扩展名的项
+    ),
+  ];
   console.log(
     `  ${colorize('🛠️', colors.blue)} ${' 技术广度'.padEnd(12)}: ${colorize(
       `${advancedMetrics.techBreadth}%`,
@@ -63,7 +82,7 @@ export function renderVisualReport(report, stats) {
       Object.keys(stats.rootModules).length,
       colors.yellow
     )} 个模块，涉及 ${colorize(
-      Object.keys(stats.fileExtensions).join('/'),
+      cleanedExtensions.join('/'),
       colors.green
     )} 等技术)`
   );
