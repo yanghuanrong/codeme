@@ -201,6 +201,20 @@ export async function generateReport(config) {
     outputJsonReport(report, stats, projectStats);
   } else {
     renderVisualReport(report, stats);
+
+    // 生成并显示开发者画像评价
+    const { generateEvaluation, renderEvaluation } = await import(
+      './reporters/multiProject.js'
+    );
+    const singleProjectResult = {
+      projectName,
+      stats,
+      projectStats,
+      metrics,
+      collaboration,
+    };
+    const evaluation = generateEvaluation(report, stats, [singleProjectResult]);
+    renderEvaluation(evaluation);
   }
 }
 
