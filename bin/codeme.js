@@ -29,12 +29,19 @@ program
 
     const config = {
       year,
-      repoPath: resolve(process.cwd(), repoPath),
+      repoPath: repoPath || '.',
       sampleFilesCount: parseInt(options.sample, 10) || 10,
       jsonMode: options.json || false,
     }
 
-    generateReport(config).catch(console.error)
+    generateReport(config).catch((error) => {
+      if (options.json) {
+        console.error(JSON.stringify({ error: error.message }))
+      } else {
+        console.error(error.message)
+      }
+      process.exit(1)
+    })
   })
 
 program.parse(process.argv)

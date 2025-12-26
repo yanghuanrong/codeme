@@ -9,14 +9,25 @@
     "codeme": "./bin/codeme.js"
   },
   "scripts": {
+    "start": "node bin/codeme.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
     "git",
     "developer",
     "profile",
-    "analysis"
+    "analysis",
+    "statistics",
+    "cli"
   ],
+  "author": "",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
   "dependencies": {
     "commander": "^11.1.0"
   }
