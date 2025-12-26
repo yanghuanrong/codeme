@@ -34,7 +34,8 @@ export const parseLogs = (rawLogs) => {
     .sort((a, b) => a.date - b.date)
 }
 
-export const processCommits = (commitBlocks, logs, stats, author) => {
+export const processCommits = (commitBlocks, logs, stats, author, onProgress = null) => {
+  let processed = 0
   commitBlocks.forEach((block) => {
     const lines = block.trim().split('\n')
     const hash = lines[0]
@@ -114,6 +115,11 @@ export const processCommits = (commitBlocks, logs, stats, author) => {
         lines: commitTotalChange,
         date,
       }
+    }
+
+    processed++
+    if (onProgress) {
+      onProgress(processed, commitBlocks.length)
     }
   })
 

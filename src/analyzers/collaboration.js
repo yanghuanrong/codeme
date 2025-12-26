@@ -1,6 +1,6 @@
 import { runGit } from '../utils/git.js'
 
-export const analyzeCollaboration = (stats, repoPath, sampleFilesCount, author) => {
+export const analyzeCollaboration = (stats, repoPath, sampleFilesCount, author, onProgress = null) => {
   const sortedFiles = Object.entries(stats.modules).sort((a, b) => b[1] - a[1])
   const topFiles = sortedFiles.slice(0, sampleFilesCount)
 
@@ -8,7 +8,7 @@ export const analyzeCollaboration = (stats, repoPath, sampleFilesCount, author) 
   let othersLines = 0
   let soleMaintainedCount = 0
 
-  topFiles.forEach(([file]) => {
+  topFiles.forEach(([file], index) => {
     const filePath = file.startsWith('./') ? file.slice(2) : file
     try {
       const blameData = runGit(
@@ -31,6 +31,10 @@ export const analyzeCollaboration = (stats, repoPath, sampleFilesCount, author) 
       if (authorCount === 1) soleMaintainedCount++
     } catch (e) {
       // 忽略无法访问的文件
+    }
+
+    if (onProgress) {
+      onProgress(index + 1, topFiles.length)
     }
   })
 

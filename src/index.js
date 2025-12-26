@@ -14,7 +14,6 @@ import {
   calculateDateExtremes,
   extractTopKeywords,
 } from './analyzers/stats.js'
-import { SENTIMENT_DICT } from './utils/constants.js'
 import { analyzeCollaboration } from './analyzers/collaboration.js'
 import { calculateMetrics } from './analyzers/metrics.js'
 import { buildReport } from './reporters/buildReport.js'
@@ -22,106 +21,6 @@ import { outputJsonReport } from './reporters/json.js'
 import { renderVisualReport } from './reporters/visual.js'
 import { ProgressBar, showProgress, logStep } from './utils/progress.js'
 import { createError, handleError } from './utils/errors.js'
-
-function processCommitsWithProgress(
-  commitBlocks,
-  logs,
-  stats,
-  author,
-  progressBar
-) {
-  let processed = 0
-  commitBlocks.forEach((block) => {
-    const lines = block.trim().split('\n')
-    const hash = lines[0]
-    const files = lines.slice(1)
-    const logEntry = logs.find((l) => l.hash === hash)
-    if (!logEntry) {
-      processed++
-      if (progressBar) progressBar.update(processed)
-      return
-    }
-
-    const { date, msg } = logEntry
-    const hour = date.getHours()
-    const day = date.getDay()
-    const month = date.getMonth()
-    const dateKey = date.toISOString().split('T')[0]
-
-    if (SENTIMENT_DICT.positive.test(msg)) stats.sentiment.positive++
-    if (SENTIMENT_DICT.negative.test(msg)) stats.sentiment.negative++
-    if (SENTIMENT_DICT.stressful.test(msg)) stats.sentiment.stressful++
-
-    stats.time.hours[hour]++
-    stats.time.weekdays[day]++
-    stats.time.months[month]++
-    if (!stats.time.dates[dateKey]) stats.time.dates[dateKey] = []
-    stats.time.dates[dateKey].push(date)
-
-    if (hour >= 0 && hour <= 6) {
-      stats.extremes.midnightCommits++
-      if (
-        !stats.extremes.latestMoment ||
-        hour > stats.extremes.latestMoment.date.getHours() ||
-        (hour === stats.extremes.latestMoment.date.getHours() &&
-          date.getMinutes() > stats.extremes.latestMoment.date.getMinutes())
-      ) {
-        stats.extremes.latestMoment = logEntry
-      }
-    }
-
-    stats.allMessages.push(msg)
-
-    const lowerMsg = msg.toLowerCase()
-    const isRefactor = lowerMsg.includes('refactor')
-    if (lowerMsg.includes('feat')) stats.style.feat++
-    else if (lowerMsg.includes('fix')) {
-      stats.style.fix++
-      stats.specialized.fixCount++
-    } else if (isRefactor) stats.style.refactor++
-    else if (lowerMsg.includes('docs')) stats.style.docs++
-    else stats.style.chore++
-
-    let commitTotalChange = 0
-    files.forEach((f) => {
-      const parts = f.split('\t')
-      if (parts.length === 3) {
-        const add = parseInt(parts[0]) || 0
-        const sub = parseInt(parts[1]) || 0
-        stats.summary.totalAdditions += add
-        stats.summary.totalDeletions += sub
-        commitTotalChange += add + sub
-
-        if (isRefactor) {
-          stats.specialized.refactorAdd += add
-          stats.specialized.refactorDel += sub
-        }
-
-        const path = parts[2]
-        const ext = path.split('.').pop()
-        if (ext && ext !== path)
-          stats.fileExtensions[ext] = (stats.fileExtensions[ext] || 0) + 1
-
-        stats.modules[path] = (stats.modules[path] || 0) + 1
-        const rootDir = path.split('/')[0] || 'root'
-        stats.rootModules[rootDir] = (stats.rootModules[rootDir] || 0) + 1
-      }
-    })
-
-    if (commitTotalChange > stats.extremes.biggestCommit.lines) {
-      stats.extremes.biggestCommit = {
-        msg,
-        lines: commitTotalChange,
-        date,
-      }
-    }
-
-    processed++
-    if (progressBar) progressBar.update(processed)
-  })
-
-  stats.summary.totalCommits = logs.length
-}
 
 export async function generateReport(config) {
   const { year, repoPath, sampleFilesCount = 10, jsonMode = false } = config
@@ -199,12 +98,16 @@ export async function generateReport(config) {
   const commitBlocks = numStats.split('COMMIT_SEP|').filter(Boolean)
 
   let progressBar = null
+  let onProgress = null
   if (commitBlocks.length > 0 && !jsonMode) {
     progressBar = new ProgressBar(commitBlocks.length, '处理提交')
     console.log('')
+    onProgress = (current, total) => {
+      progressBar.update(current)
+    }
   }
 
-  processCommitsWithProgress(commitBlocks, logs, stats, author, progressBar)
+  processCommits(commitBlocks, logs, stats, author, onProgress)
 
   if (!jsonMode && progressBar) {
     progressBar.finish('提交数据处理完成')
@@ -227,17 +130,37 @@ export async function generateReport(config) {
     progressSpinner.stop()
   }
 
+  let collaborationProgressBar = null
+  let collaborationOnProgress = null
   if (!jsonMode) {
-    progressSpinner = showProgress('正在分析协作度...')
+    const topFilesCount = Math.min(
+      sampleFilesCount,
+      Object.keys(stats.modules).length
+    )
+    if (topFilesCount > 0) {
+      collaborationProgressBar = new ProgressBar(topFilesCount, '分析协作度')
+      console.log('')
+      collaborationOnProgress = (current, total) => {
+        collaborationProgressBar.update(current)
+      }
+    } else {
+      progressSpinner = showProgress('正在分析协作度...')
+    }
   }
   const collaboration = analyzeCollaboration(
     stats,
     validatedRepoPath,
     sampleFilesCount,
-    author
+    author,
+    collaborationOnProgress
   )
   if (!jsonMode) {
-    progressSpinner.stop('协作度分析完成')
+    if (collaborationProgressBar) {
+      collaborationProgressBar.finish('协作度分析完成')
+      console.log('')
+    } else {
+      progressSpinner.stop('协作度分析完成')
+    }
   }
 
   if (!jsonMode) {

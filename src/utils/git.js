@@ -3,14 +3,18 @@ import { basename, resolve } from 'path'
 import { existsSync } from 'fs'
 import { GIT_MAX_BUFFER } from './constants.js'
 
-export const runGit = (cmd, repoPath) => {
+export const runGit = (cmd, repoPath, throwOnError = false) => {
   try {
     return execSync(cmd, {
       encoding: 'utf8',
       cwd: repoPath,
       maxBuffer: GIT_MAX_BUFFER,
+      stdio: throwOnError ? 'pipe' : ['pipe', 'pipe', 'ignore'],
     }).trim()
   } catch (e) {
+    if (throwOnError) {
+      throw new Error(`Git 命令执行失败: ${cmd}\n错误信息: ${e.message}`)
+    }
     return ''
   }
 }

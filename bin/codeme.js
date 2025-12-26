@@ -2,7 +2,7 @@
 
 import { program } from 'commander'
 import { generateReport } from '../src/index.js'
-import { handleError } from '../src/utils/errors.js'
+import { handleError, createError } from '../src/utils/errors.js'
 import { fileURLToPath } from 'url'
 import { dirname, resolve } from 'path'
 import { readFileSync } from 'fs'
@@ -36,10 +36,27 @@ program
       config = await promptInteractiveConfig()
     } else {
       const year = options.year || new Date().getFullYear().toString()
+      const sampleCount = parseInt(options.sample, 10) || 10
+
+      // 输入验证
+      const yearNum = parseInt(year, 10)
+      if (isNaN(yearNum) || yearNum < 2000 || yearNum > 2100) {
+        handleError(createError('INVALID_YEAR', `年份 "${year}" 无效`), false)
+        return
+      }
+
+      if (isNaN(sampleCount) || sampleCount < 1 || sampleCount > 100) {
+        handleError(
+          createError('INVALID_SAMPLE', `采样数量 "${options.sample}" 无效`),
+          false
+        )
+        return
+      }
+
       config = {
-        year,
+        year: yearNum.toString(),
         repoPath: repoPath || '.',
-        sampleFilesCount: parseInt(options.sample, 10) || 10,
+        sampleFilesCount: sampleCount,
         jsonMode: options.json || false,
       }
     }

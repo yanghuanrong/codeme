@@ -16,6 +16,7 @@ export async function promptInteractiveConfig() {
       default: '.',
       validate: (input) => {
         if (!input || input.trim() === '') return true
+        // 基本路径验证
         return true
       },
     },
