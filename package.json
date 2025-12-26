@@ -8,6 +8,11 @@
   "bin": {
     "codeme": "./bin/codeme.js"
   },
+  "files": [
+    "bin",
+    "src",
+    "README.md"
+  ],
   "scripts": {
     "start": "node bin/codeme.js",
     "test": "echo \"Error: no test specified\" && exit 1"

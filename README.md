@@ -5,11 +5,14 @@
 ## 安装
 
 ```bash
-# 本地安装（开发模式）
-npm install
+# 方式一：使用 npx（推荐，无需安装）
+npx codeme
 
-# 全局安装（推荐）
-npm install -g
+# 方式二：全局安装
+npm install -g codeme
+
+# 方式三：本地安装（开发模式）
+npm install
 ```
 
 ## 使用方法
@@ -62,13 +65,14 @@ codeme -y 2025 --json
 ## 使用示例
 
 ```bash
-# 分析当前用户 2025 年的开发画像
+# 使用 npx 直接运行（推荐）
+npx codeme
+npx codeme -y 2025
+npx codeme /path/to/project -y 2024
+
+# 如果已全局安装
 codeme -y 2025
-
-# 分析指定仓库的开发情况
 codeme /path/to/project -y 2024
-
-# 增加采样量以获得更准确的协作度分析
 codeme -s 30
 ```
 
