@@ -1,4 +1,5 @@
 import { execSync } from 'child_process'
+import { basename } from 'path'
 
 const colors = {
   reset: '\x1b[0m',
@@ -56,6 +57,23 @@ const getGitUser = (repoPath) => {
   const email = runGit('git config user.email', repoPath)
   const name = runGit('git config user.name', repoPath)
   return email || name
+}
+
+const getProjectName = (repoPath) => {
+  // 尝试从 git remote 获取项目名称
+  const remoteUrl = runGit('git config --get remote.origin.url', repoPath)
+  if (remoteUrl) {
+    // 处理各种格式的 remote URL
+    // git@github.com:user/repo.git -> repo
+    // https://github.com/user/repo.git -> repo
+    // https://github.com/user/repo -> repo
+    const match = remoteUrl.match(/(?:[/:])([^/]+?)(?:\.git)?$/)
+    if (match && match[1]) {
+      return match[1]
+    }
+  }
+  // 如果无法从 remote 获取，使用目录名
+  return basename(repoPath)
 }
 
 const getProjectStats = (since, until, repoPath) => {
@@ -349,6 +367,7 @@ const calculateMetrics = (stats, avgCommitsPerPerson) => {
 const buildReport = (
   author,
   year,
+  projectName,
   stats,
   projectStats,
   metrics,
@@ -382,6 +401,7 @@ const buildReport = (
   return {
     user: author,
     year,
+    projectName,
     overview: {
       commits: stats.summary.totalCommits,
       daysWorked: Object.keys(stats.time.dates).length,
@@ -451,6 +471,11 @@ const buildReport = (
         detail: logs[0].msg,
       },
       {
+        type: '年度收官',
+        date: formatDateTime(logs[logs.length - 1].date),
+        detail: logs[logs.length - 1].msg,
+      },
+      {
         type: '影响力高峰',
         date: formatDateTime(stats.extremes.biggestCommit.date),
         detail: `单次变动 ${stats.extremes.biggestCommit.lines} 行`,
@@ -459,11 +484,6 @@ const buildReport = (
         type: '最长连击',
         date: `${maxStreak} 天`,
         detail: '坚持是最高级的技术',
-      },
-      {
-        type: '年度收官',
-        date: formatDateTime(logs[logs.length - 1].date),
-        detail: logs[logs.length - 1].msg,
       },
     ],
     posterKeywords: {
@@ -543,6 +563,7 @@ export async function generateReport(config) {
     author
   )
   const metrics = calculateMetrics(stats, projectStats.avgCommitsPerPerson)
+  const projectName = getProjectName(repoPath)
 
   console.log(
     colorize(
@@ -554,6 +575,7 @@ export async function generateReport(config) {
   const report = buildReport(
     author,
     year,
+    projectName,
     stats,
     projectStats,
     metrics,
@@ -569,6 +591,7 @@ export function renderVisualReport(report, stats) {
   const {
     user,
     year,
+    projectName,
     overview,
     contrast,
     radar,
@@ -584,6 +607,8 @@ export function renderVisualReport(report, stats) {
   console.log('\n' + colorize('='.repeat(80), colors.cyan, colors.bright))
   console.log(
     colorize('✨ ', colors.yellow) +
+      colorize(`${projectName}`, colors.magenta, colors.bright) +
+      colorize(' | ', colors.gray) +
       colorize(`${user}`, colors.cyan, colors.bright) +
       colorize(' | ', colors.gray) +
       colorize(`${year}`, colors.yellow, colors.bright) +
@@ -607,7 +632,9 @@ export function renderVisualReport(report, stats) {
     )} 的开发者`
   )
   console.log(
-    `  ${colorize('🏰', colors.magenta)} 独自维护指标: ${colorize(
+    `  ${colorize('🏰', colors.magenta)} ${'独自维护指标'.padEnd(
+      9
+    )}: ${colorize(
       `${advancedMetrics.soleMaintenanceIndex}%`,
       colors.cyan
     )} | 创新产出比: ${colorize(
@@ -616,7 +643,7 @@ export function renderVisualReport(report, stats) {
     )}`
   )
   console.log(
-    `  ${colorize('🛠️', colors.blue)}  技术广度: ${colorize(
+    `  ${colorize('🛠️', colors.blue)} ${' 技术广度'.padEnd(12)}: ${colorize(
       `${advancedMetrics.techBreadth}%`,
       colors.cyan
     )} (跨越了 ${colorize(
@@ -628,7 +655,7 @@ export function renderVisualReport(report, stats) {
     )} 等技术)`
   )
   console.log(
-    `  ${colorize('💎', colors.cyan)}  代码精炼度: ${colorize(
+    `  ${colorize('💎', colors.cyan)} ${'代码精炼度'.padEnd(10)}: ${colorize(
       `${advancedMetrics.refinementImpact}%`,
       colors.green
     )} (在重构中移除了 ${colorize(
@@ -637,7 +664,7 @@ export function renderVisualReport(report, stats) {
     )} 行冗余代码)`
   )
   console.log(
-    `  ${colorize('🔥', colors.red)} 年度总提交: ${colorize(
+    `  ${colorize('🔥', colors.red)} ${'年度总提交'.padEnd(10)}: ${colorize(
       `${overview.commits}`,
       colors.bright,
       colors.yellow
@@ -648,7 +675,7 @@ export function renderVisualReport(report, stats) {
     )} 天`
   )
   console.log(
-    `  ${colorize('🏷️', colors.magenta)} 荣誉标签: ${
+    `  ${colorize('🏷️', colors.magenta)} ${' 荣誉标签'.padEnd(12)}: ${
       labels.length > 0
         ? labels.map((l) => colorize(l, colors.cyan)).join(' | ')
         : colorize('稳步前进中', colors.gray)
@@ -665,7 +692,9 @@ export function renderVisualReport(report, stats) {
       ? colors.yellow
       : colors.cyan
   console.log(
-    `  ${colorize('🎭', colors.magenta)} 年度编码心境: ${colorize(
+    `  ${colorize('🎭', colors.magenta)} ${'年度编码心境'.padEnd(
+      12
+    )}: ${colorize(
       sentimentProfile.mood,
       moodColor,
       colors.bright
@@ -673,7 +702,9 @@ export function renderVisualReport(report, stats) {
   )
   if (timeCapsule.latestCommit) {
     console.log(
-      `  ${colorize('🌙', colors.blue)} 年度最晚提交: ${colorize(
+      `  ${colorize('🌙', colors.blue)} ${'年度最晚提交'.padEnd(
+        12
+      )}: ${colorize(
         timeCapsule.latestCommit.date,
         colors.yellow
       )} -> ${colorize(`"${timeCapsule.latestCommit.msg}"`, colors.cyan)}`
@@ -682,10 +713,9 @@ export function renderVisualReport(report, stats) {
   if (timeCapsule.marathonDay.date) {
     const marathonDateTime = formatDateTime(timeCapsule.marathonDay.date)
     console.log(
-      `  ${colorize('🏃', colors.green)} 单日最长奋战: ${colorize(
-        marathonDateTime,
-        colors.yellow
-      )} (持续 ${colorize(
+      `  ${colorize('🏃', colors.green)} ${'单日最长奋战'.padEnd(
+        12
+      )}: ${colorize(marathonDateTime, colors.yellow)} (持续 ${colorize(
         `${timeCapsule.marathonDay.span}`,
         colors.red,
         colors.bright
@@ -695,7 +725,7 @@ export function renderVisualReport(report, stats) {
   if (timeCapsule.maxCommitsPerDay.count > 0) {
     const maxCommitsDateTime = formatDateTime(timeCapsule.maxCommitsPerDay.date)
     console.log(
-      `  ${colorize('🚀', colors.red)} 单日最多提交: ${colorize(
+      `  ${colorize('🚀', colors.red)} ${'单日最多提交'.padEnd(12)}: ${colorize(
         maxCommitsDateTime,
         colors.yellow
       )} (共 ${colorize(
@@ -705,18 +735,20 @@ export function renderVisualReport(report, stats) {
       )} 次提交)`
     )
   }
-  if (stats.extremes.biggestCommit.lines > 0) {
-    console.log(
-      `  ${colorize('📊', colors.blue)} 影响力高峰: ${colorize(
-        formatDateTime(stats.extremes.biggestCommit.date),
-        colors.yellow
-      )} (单次改动 ${colorize(
-        stats.extremes.biggestCommit.lines,
-        colors.red,
-        colors.bright
-      )} 行)`
-    )
-  }
+  // if (stats.extremes.biggestCommit.lines > 0) {
+  //   console.log(
+  //     `  ${colorize('📊', colors.blue)} ${'影响力高峰日'.padEnd(
+  //       12
+  //     )}: ${colorize(
+  //       formatDateTime(stats.extremes.biggestCommit.date),
+  //       colors.yellow
+  //     )} (单次改动 ${colorize(
+  //       stats.extremes.biggestCommit.lines,
+  //       colors.red,
+  //       colors.bright
+  //     )} 行)`
+  //   )
+  // }
 
   console.log(
     '\n' + colorize('【六维事业雷达基因图谱】', colors.magenta, colors.bright)
@@ -779,7 +811,7 @@ export function renderVisualReport(report, stats) {
     '\n' + colorize('【工作习惯洞察】', colors.magenta, colors.bright)
   )
   console.log(
-    `  ${colorize('⏰', colors.yellow)} 黄金时段: ${colorize(
+    `  ${colorize('🕒', colors.yellow)} ${'黄金时段'.padEnd(12)}: ${colorize(
       `${habits.peakHour}:00`,
       colors.cyan,
       colors.bright
@@ -789,7 +821,7 @@ export function renderVisualReport(report, stats) {
   const netLinesColor =
     netLines > 0 ? colors.green : netLines < 0 ? colors.red : colors.gray
   console.log(
-    `  ${colorize('📈', colors.green)} 代码资产净增: ${colorize(
+    `  ${colorize('📈', colors.green)} ${'代码资产净增'.padEnd(10)}: ${colorize(
       `${netLines}`,
       netLinesColor,
       colors.bright
