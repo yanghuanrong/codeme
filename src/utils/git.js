@@ -20,9 +20,13 @@ export const validateRepo = (repoPath) => {
   if (!existsSync(resolvedPath)) {
     throw new Error(`仓库路径不存在: ${resolvedPath}`)
   }
-  const gitDir = runGit('git rev-parse --git-dir', resolvedPath)
-  if (!gitDir) {
-    throw new Error(`指定路径不是有效的 Git 仓库: ${resolvedPath}`)
+  try {
+    const gitDir = runGit('git rev-parse --git-dir', resolvedPath)
+    if (!gitDir) {
+      throw new Error(`指定路径不是有效的 Git 仓库: ${resolvedPath}`)
+    }
+  } catch (error) {
+    throw new Error(`Git 命令执行失败: ${error.message}`)
   }
   return resolvedPath
 }

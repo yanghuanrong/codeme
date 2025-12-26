@@ -2,6 +2,7 @@
 
 import { program } from 'commander'
 import { generateReport } from '../src/index.js'
+import { handleError } from '../src/utils/errors.js'
 import { fileURLToPath } from 'url'
 import { dirname, resolve } from 'path'
 import { readFileSync } from 'fs'
@@ -24,23 +25,27 @@ program
   .option('-y, --year <year>', '指定年份（如：2025）', '')
   .option('-s, --sample <count>', '采样文件数量（默认：10）', '10')
   .option('-j, --json', '以 JSON 格式输出数据', false)
-  .action((repoPath, options) => {
-    const year = options.year || new Date().getFullYear().toString()
+  .option('-i, --interactive', '使用交互式模式', false)
+  .action(async (repoPath, options) => {
+    let config
 
-    const config = {
-      year,
-      repoPath: repoPath || '.',
-      sampleFilesCount: parseInt(options.sample, 10) || 10,
-      jsonMode: options.json || false,
+    if (options.interactive) {
+      const { promptInteractiveConfig } = await import(
+        '../src/utils/interactive.js'
+      )
+      config = await promptInteractiveConfig()
+    } else {
+      const year = options.year || new Date().getFullYear().toString()
+      config = {
+        year,
+        repoPath: repoPath || '.',
+        sampleFilesCount: parseInt(options.sample, 10) || 10,
+        jsonMode: options.json || false,
+      }
     }
 
     generateReport(config).catch((error) => {
-      if (options.json) {
-        console.error(JSON.stringify({ error: error.message }))
-      } else {
-        console.error(error.message)
-      }
-      process.exit(1)
+      handleError(error, config.jsonMode)
     })
   })
 

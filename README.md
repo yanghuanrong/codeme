@@ -35,6 +35,10 @@ codeme -s 20
 # 以 JSON 格式输出数据
 codeme --json
 
+# 使用交互式模式（推荐新手使用）
+codeme -i
+codeme --interactive
+
 # 组合使用
 codeme /path/to/repo -y 2024 -s 30
 
@@ -47,6 +51,8 @@ codeme -y 2025 --json
 - `[repoPath]` - 仓库路径（可选，默认为当前目录）
 - `-y, --year <year>` - 指定年份（如：2025，默认为当前年份）
 - `-s, --sample <count>` - 采样文件数量（默认：10）
+- `-j, --json` - 以 JSON 格式输出数据
+- `-i, --interactive` - 使用交互式模式，通过问答方式配置参数
 - `-V, --version` - 显示版本号
 - `-h, --help` - 显示帮助信息
 
@@ -61,6 +67,9 @@ codeme -y 2025 --json
 - 🎭 **情感分析**：通过提交消息分析编码心境
 - ⏰ **时间分析**：工作习惯、黄金时段、极端时刻
 - 📈 **六维雷达图**：活跃度、影响力、精炼度、协作度、稳定性、广度
+- 🎯 **交互式模式**：通过友好的问答界面配置分析参数
+- 📊 **实时进度反馈**：显示分析进度，了解当前处理状态
+- ❌ **友好错误提示**：提供详细的错误信息和解决建议
 
 ## 使用示例
 
@@ -74,6 +83,9 @@ npx codeme /path/to/project -y 2024
 codeme -y 2025
 codeme /path/to/project -y 2024
 codeme -s 30
+
+# 交互式模式（推荐新手）
+codeme -i
 ```
 
 ## 工作原理
