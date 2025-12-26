@@ -1,6 +1,6 @@
 {
   "name": "codeme",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "分析 Git 项目的开发者画像和编码习惯",
   "license": "MIT",
   "type": "module",
@@ -15,7 +15,9 @@
   ],
   "scripts": {
     "start": "node bin/codeme.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint . --ext .js",
+    "format": "prettier --write \"**/*.{js,json,md}\""
   },
   "keywords": [
     "git",
@@ -25,10 +27,10 @@
     "statistics",
     "cli"
   ],
-  "author": "",
+  "author": "yanghuanrong",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/yanghuanrong/codeme"
   },
   "engines": {
     "node": ">=14.0.0"

@@ -61,9 +61,11 @@ program
       }
     }
 
-    generateReport(config).catch((error) => {
+    try {
+      await generateReport(config)
+    } catch (error) {
       handleError(error, config.jsonMode)
-    })
+    }
   })
 
 program.parse(process.argv)

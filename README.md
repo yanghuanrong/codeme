@@ -1,6 +1,24 @@
 # codeme
 
-分析 Git 项目的开发者画像和编码习惯。
+[![npm version](https://img.shields.io/npm/v/codeme.svg)](https://www.npmjs.com/package/codeme)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen.svg)](https://nodejs.org/)
+
+分析 Git 项目的开发者画像和编码习惯的 CLI 工具。
+
+## ✨ 特性
+
+- 📊 **核心能力分析**：贡献度、影响力、协作度等指标
+- 🏰 **独自维护指标**：分析你在项目中的独立性
+- 💎 **代码精炼度**：重构中的代码优化情况
+- 🌐 **技术广度**：涉及的技术栈和模块数量
+- 🎭 **情感分析**：通过提交消息分析编码心境
+- ⏰ **时间分析**：工作习惯、黄金时段、极端时刻
+- 📈 **六维雷达图**：活跃度、影响力、精炼度、协作度、稳定性、广度
+- 🎯 **交互式模式**：通过友好的问答界面配置分析参数
+- 📊 **实时进度反馈**：显示分析进度，了解当前处理状态
+- ❌ **友好错误提示**：提供详细的错误信息和解决建议
+- 🔒 **隐私保护**：所有分析均在本地进行，不会上传任何数据
 
 ## 安装
 
@@ -58,19 +76,6 @@ codeme -y 2025 --json
 
 **注意**：工具会自动检测当前 Git 用户（通过 `git config user.email` 或 `git config user.name`），无需手动指定作者。
 
-## 功能特性
-
-- 📊 **核心能力分析**：贡献度、影响力、协作度等指标
-- 🏰 **独自维护指标**：分析你在项目中的独立性
-- 💎 **代码精炼度**：重构中的代码优化情况
-- 🌐 **技术广度**：涉及的技术栈和模块数量
-- 🎭 **情感分析**：通过提交消息分析编码心境
-- ⏰ **时间分析**：工作习惯、黄金时段、极端时刻
-- 📈 **六维雷达图**：活跃度、影响力、精炼度、协作度、稳定性、广度
-- 🎯 **交互式模式**：通过友好的问答界面配置分析参数
-- 📊 **实时进度反馈**：显示分析进度，了解当前处理状态
-- ❌ **友好错误提示**：提供详细的错误信息和解决建议
-
 ## 使用示例
 
 ```bash
@@ -102,6 +107,34 @@ codeme -i
 - 分析结果仅供参考，请谨慎使用
 - 需要确保在 Git 仓库目录中运行，或指定正确的仓库路径
 
+## 开发
+
+```bash
+# 克隆项目
+git clone https://github.com/yanghuanrong/codeme.git
+cd codeme
+
+# 安装依赖
+npm install
+
+# 运行
+npm start
+```
+
+## 贡献
+
+欢迎贡献代码！请查看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解详细信息。
+
+## 更新日志
+
+查看 [CHANGELOG.md](CHANGELOG.md) 了解版本更新历史。
+
 ## License
 
-MIT
+MIT License - 查看 [LICENSE](LICENSE) 文件了解详情。
+
+## 相关链接
+
+- [GitHub Repository](https://github.com/yanghuanrong/codeme)
+- [npm Package](https://www.npmjs.com/package/codeme)
+- [Issue Tracker](https://github.com/yanghuanrong/codeme/issues)
