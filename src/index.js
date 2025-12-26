@@ -501,36 +501,53 @@ const buildReport = (
 }
 
 export async function generateReport(config) {
-  const { year, repoPath, sampleFilesCount = 10 } = config
+  const { year, repoPath, sampleFilesCount = 10, jsonMode = false } = config
 
   const author = getGitUser(repoPath)
   if (!author) {
-    console.error(
-      colorize(
-        '❌ 无法检测 Git 用户信息，请确保已配置 Git user.name 或 user.email',
-        colors.red,
-        colors.bright
+    if (jsonMode) {
+      console.error(
+        JSON.stringify({
+          error:
+            '无法检测 Git 用户信息，请确保已配置 Git user.name 或 user.email',
+        })
       )
-    )
+    } else {
+      console.error(
+        colorize(
+          '❌ 无法检测 Git 用户信息，请确保已配置 Git user.name 或 user.email',
+          colors.red,
+          colors.bright
+        )
+      )
+    }
     return
   }
 
-  console.log(
-    colorize(
-      `🚀 正在深度挖掘 ${colorize(
-        author,
-        colors.cyan,
-        colors.bright
-      )} 的 ${colorize(year, colors.yellow, colors.bright)} 年度开发者画像...`,
-      colors.blue
+  if (!jsonMode) {
+    console.log(
+      colorize(
+        `🚀 正在深度挖掘 ${colorize(
+          author,
+          colors.cyan,
+          colors.bright
+        )} 的 ${colorize(
+          year,
+          colors.yellow,
+          colors.bright
+        )} 年度开发者画像...`,
+        colors.blue
+      )
     )
-  )
+  }
 
   const since = `${year}-01-01 00:00:00`
   const until = `${year}-12-31 23:59:59`
   const authorFilter = `--author="${author}"`
 
-  console.log(colorize('📊 正在抓取全仓库基准数据以进行对比...', colors.blue))
+  if (!jsonMode) {
+    console.log(colorize('📊 正在抓取全仓库基准数据以进行对比...', colors.blue))
+  }
   const projectStats = getProjectStats(since, until, repoPath)
 
   const logFormat = '%h|%ad|%s'
@@ -539,7 +556,11 @@ export async function generateReport(config) {
     repoPath
   )
   if (!rawLogs) {
-    console.log(colorize('未找到数据。', colors.yellow))
+    if (jsonMode) {
+      console.log(JSON.stringify({ error: '未找到数据' }))
+    } else {
+      console.log(colorize('未找到数据。', colors.yellow))
+    }
     return
   }
 
@@ -565,13 +586,15 @@ export async function generateReport(config) {
   const metrics = calculateMetrics(stats, projectStats.avgCommitsPerPerson)
   const projectName = getProjectName(repoPath)
 
-  console.log(
-    colorize(
-      '\n📊 终极数据分析完成，正在生成可视化报告...',
-      colors.green,
-      colors.bright
+  if (!jsonMode) {
+    console.log(
+      colorize(
+        '\n📊 终极数据分析完成，正在生成可视化报告...',
+        colors.green,
+        colors.bright
+      )
     )
-  )
+  }
   const report = buildReport(
     author,
     year,
@@ -584,7 +607,86 @@ export async function generateReport(config) {
     topKeywords
   )
 
-  renderVisualReport(report, stats)
+  if (jsonMode) {
+    outputJsonReport(report, stats, projectStats)
+  } else {
+    renderVisualReport(report, stats)
+  }
+}
+
+export function outputJsonReport(report, stats, projectStats) {
+  const jsonData = {
+    projectName: report.projectName,
+    user: report.user,
+    year: report.year,
+    overview: {
+      commits: report.overview.commits,
+      daysWorked: report.overview.daysWorked,
+      maxStreak: report.overview.maxStreak,
+      linesAdded: report.overview.linesAdded,
+      linesRemoved: report.overview.linesRemoved,
+      health: parseFloat(report.overview.health),
+    },
+    contrast: {
+      projectTotalCommits: report.contrast.projectTotalCommits,
+      projectAuthors: report.contrast.projectAuthors,
+      contributionRatio: parseFloat(report.contrast.contributionRatio),
+      beatPercent: report.contrast.beatPercent,
+    },
+    sentimentProfile: {
+      mood: report.sentimentProfile.mood,
+      positiveCount: report.sentimentProfile.positiveCount,
+      stressCount: report.sentimentProfile.stressCount,
+    },
+    advancedMetrics: {
+      soleMaintenanceIndex: parseFloat(
+        report.advancedMetrics.soleMaintenanceIndex
+      ),
+      innovationRatio: parseFloat(report.advancedMetrics.innovationRatio),
+      refinementImpact: parseFloat(report.advancedMetrics.refinementImpact),
+      techBreadth: parseFloat(report.advancedMetrics.techBreadth),
+    },
+    timeCapsule: {
+      latestCommit: report.timeCapsule.latestCommit,
+      marathonDay: report.timeCapsule.marathonDay,
+      maxCommitsPerDay: report.timeCapsule.maxCommitsPerDay,
+      monthlyDistribution: report.timeCapsule.monthlyDistribution,
+    },
+    techFingerprint: {
+      topExtensions: report.techFingerprint.topExtensions,
+    },
+    radar: Object.fromEntries(
+      Object.entries(report.radar).map(([key, value]) => [key, parseInt(value)])
+    ),
+    milestones: report.milestones,
+    posterKeywords: report.posterKeywords,
+    habits: report.habits,
+    labels: report.labels,
+    stats: {
+      modules: Object.keys(stats.modules).length,
+      rootModules: Object.keys(stats.rootModules),
+      fileExtensions: Object.keys(stats.fileExtensions),
+      specialized: {
+        refactorAdd: stats.specialized.refactorAdd,
+        refactorDel: stats.specialized.refactorDel,
+        fixCount: stats.specialized.fixCount,
+      },
+      extremes: {
+        biggestCommit: {
+          msg: stats.extremes.biggestCommit.msg,
+          lines: stats.extremes.biggestCommit.lines,
+          date: stats.extremes.biggestCommit.date
+            ? formatDateTime(stats.extremes.biggestCommit.date)
+            : null,
+        },
+        midnightCommits: stats.extremes.midnightCommits,
+        longestDay: stats.extremes.longestDay,
+        maxCommitsPerDay: stats.extremes.maxCommitsPerDay,
+      },
+    },
+  }
+
+  console.log(JSON.stringify(jsonData, null, 2))
 }
 
 export function renderVisualReport(report, stats) {

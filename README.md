@@ -29,8 +29,14 @@ codeme -y 2025
 # 指定采样文件数量（用于分析协作度等指标）
 codeme -s 20
 
+# 以 JSON 格式输出数据
+codeme --json
+
 # 组合使用
 codeme /path/to/repo -y 2024 -s 30
+
+# JSON 模式组合使用
+codeme -y 2025 --json
 ```
 
 ### 命令行选项
