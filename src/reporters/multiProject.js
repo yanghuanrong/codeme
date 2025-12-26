@@ -199,10 +199,11 @@ export function generateEvaluation(report, stats, projectResults) {
     parseFloat(advancedMetrics.soleMaintenanceIndex) || 0;
   const innovationRatio = parseFloat(advancedMetrics.innovationRatio) || 0;
   const refinementImpact = parseFloat(advancedMetrics.refinementImpact) || 0;
+  const totalCommits = stats.summary.totalCommits;
   const fixRatio =
-    overview.commits > 0 ? stats.specialized.fixCount / overview.commits : 0;
+    totalCommits > 0 ? stats.specialized.fixCount / totalCommits : 0;
   const refactorRatio =
-    overview.commits > 0 ? stats.style.refactor / overview.commits : 0;
+    totalCommits > 0 ? stats.style.refactor / totalCommits : 0;
   const totalProjects = projectResults.length;
 
   // 分析每个项目的贡献占比，计算动态阈值
@@ -233,9 +234,7 @@ export function generateEvaluation(report, stats, projectResults) {
     0
   );
   const coreProjectRatio =
-    overview.commits > 0
-      ? (totalCommitsInCoreProjects / overview.commits) * 100
-      : 0;
+    totalCommits > 0 ? (totalCommitsInCoreProjects / totalCommits) * 100 : 0;
 
   // 判断角色类型
   let role = '';
@@ -328,12 +327,12 @@ export function generateEvaluation(report, stats, projectResults) {
     details.push('创新产出与代码维护并重');
     details.push('既能独立开发也能团队协作');
   }
-  // 成长型：提交数中等，各项指标在提升
+  // 活跃型：提交数中等，各项指标在提升
   else {
-    role = '成长型开发者';
+    role = '活跃开发者';
     roleEmoji = '🌱';
-    evaluation = '你正在快速成长，通过持续贡献积累经验，未来可期。';
-    details.push(`完成了 ${overview.commits} 次提交`);
+    evaluation = '你通过持续贡献为项目带来价值，保持活跃的参与度。';
+    details.push(`完成了 ${totalCommits} 次提交`);
     if (totalProjects > 1) {
       details.push(`参与了 ${totalProjects} 个项目的开发`);
       if (coreProjectCount > 0) {
@@ -360,7 +359,7 @@ export function generateEvaluation(report, stats, projectResults) {
       contributionRatio,
       soleMaintenanceIndex,
       innovationRatio,
-      totalCommits: overview.commits,
+      totalCommits,
       totalProjects,
       coreProjectCount,
     },
